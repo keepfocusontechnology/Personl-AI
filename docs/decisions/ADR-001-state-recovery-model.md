@@ -1,6 +1,6 @@
 # ADR-001: State Recovery Model
 
-> **Status**: Proposed
+> **Status**: Accepted
 >
 > **Date**: 2026-08-07
 >

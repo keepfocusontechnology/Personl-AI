@@ -1,6 +1,6 @@
 # ADR-004: Brain Execution Boundary
 
-> **Status**: Proposed
+> **Status**: Accepted
 >
 > **Date**: 2026-08-07
 >
