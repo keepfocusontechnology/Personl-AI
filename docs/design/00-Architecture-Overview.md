@@ -22,6 +22,9 @@
 5. [Core Capability Map](#5-core-capability-map)
 6. [Data Flow](#6-data-flow)
 7. [Design Principles](#7-design-principles)
+8. [State Recovery Model](#8-state-recovery-model)
+9. [Evolution Boundary](#9-evolution-boundary)
+10. [EventStream Positioning](#10-eventstream-positioning)
 
 ---
 
@@ -488,7 +491,166 @@ Trigger(时间/Memory变化/Goal变化) → Decision Engine →
 
 ---
 
-## 附录：与 v1.1 Landscape Report 的对应关系
+## 8. State Recovery Model
+
+> **详细决策见**：`docs/decisions/ADR-001-state-recovery-model.md`
+
+### 8.1 核心原则
+
+Personal-AI 是长期存在的数字生命体，必须能够在任何故障后恢复到一致状态。State Recovery Model 定义了 Brain 状态的恢复机制。
+
+**Brain 是 Source of Truth，Memory 是持久化介质。**
+
+- Brain 的运行时状态（Identity 当前版本、Self Model 当前快照、Goal 当前状态、Agency Initiative Queue）是权威状态
+- Memory 存储层是 Brain 状态的持久化介质——Brain 状态通过 Snapshot 持久化到 Memory
+- EventStream 记录所有系统事件，用于重放 Snapshot 之后的增量变化
+
+### 8.2 恢复模型：Snapshot + Event Delta
+
+```
+恢复流程：
+1. 启动 Memory 存储层（不依赖 Brain 运行时）
+2. 从 Memory 存储层加载最近的 Brain Snapshot
+3. 从 EventStream 重放 Snapshot 之后的 Brain 内部事件（Event Delta）
+4. Brain 恢复到最终一致状态
+5. 从 Brain 的 Goal 和 Initiative Queue 获取待执行任务，分派给 Execution
+```
+
+| 恢复对象 | 恢复方式 | 说明 |
+|----------|----------|------|
+| Brain 运行时状态 | Snapshot + Event Delta | 权威恢复路径 |
+| Memory 存储层 | 直接加载 | 存储层独立于 Brain 运行时 |
+| Execution | 无状态，不恢复 | 重启后从 Brain 获取待执行任务 |
+| EventStream | 直接加载 | 持久化事件日志，不依赖 Brain |
+
+### 8.3 Bootstrap 顺序
+
+Memory 存储层与 Brain 运行时分离，解决 Bootstrap 悖论：
+
+```
+启动顺序：
+Memory 存储层 → Brain 运行时（从 Memory 恢复） → EventStream 重放 → Execution 启动
+```
+
+Memory 存储层不依赖 Brain 运行时即可启动，因此可以作为 Brain 恢复的基础。
+
+### 8.4 Snapshot 策略
+
+- **触发条件**：定期 Snapshot + 关键状态变更后 Snapshot
+- **内容**：Brain 所有组件的当前状态（Identity 版本、Self Model 快照、Goal 状态、Agency Queue 状态）
+- **存储**：Snapshot 存入 Memory 存储层，与 EventStream 的 offset/timestamp 关联
+- **保留**：历史 Snapshot 保留，不删除——用于审计和历史回溯
+
+---
+
+## 9. Evolution Boundary
+
+> **详细决策见**：`docs/decisions/ADR-002-evolution-boundary.md`
+
+### 9.1 三层演化模型
+
+Personal-AI 必须能够演化，但演化必须有边界。演化能力分为三层：
+
+```
+┌──────────────────────────────────────────────────┐
+│  Layer A: Immutable Core（不可演化）               │
+│  核心价值、用户授权、安全规则——创建后不可变更       │
+├──────────────────────────────────────────────────┤
+│  Layer B: Guided Evolution（引导式演化）           │
+│  Identity 人格特征、Vision / Long Term Goal、      │
+│  用户关系定义——Reflection 提议 + 用户确认          │
+├──────────────────────────────────────────────────┤
+│  Layer C: Autonomous Evolution（自主演化）         │
+│  Self Model、Project Goal / Task、执行策略、       │
+│  Reflection 策略——Reflection 自动 + 事后通知       │
+└──────────────────────────────────────────────────┘
+```
+
+### 9.2 各层边界
+
+| 层级 | 可演化内容 | 演化方式 | 不可演化内容 |
+|------|-----------|----------|-------------|
+| Layer A | — | — | 核心价值、用户授权边界、安全规则 |
+| Layer B | Identity 人格特征、Vision、Long Term Goal、用户关系 | Reflection 提议 → 用户确认 → 生效 | 核心价值、用户授权、安全规则 |
+| Layer C | Self Model、Project Goal / Task、执行策略、Reflection 策略 | Reflection 自动 → 事后通知 | Layer A + Layer B 的内容 |
+
+### 9.3 Identity Drift Detection
+
+Identity 演化需要 Drift Detection 机制，防止人格漂移：
+
+- 每次 Identity 更新前，计算新版本与基线版本的 Drift Score
+- Drift Score 超过阈值时，要求用户确认
+- Drift Score 计算方法和阈值由 Phase 2 详细设计
+
+### 9.4 Reflection 的演化权限
+
+Reflection 是演化的引擎，但 Reflection 本身也受边界约束：
+
+| Reflection 可以做 | Reflection 不可以做 |
+|-------------------|---------------------|
+| 提议 Layer B 变更（需用户确认） | 直接变更 Layer A |
+| 自动执行 Layer C 变更（事后通知） | 直接变更 Layer B（绕过用户确认） |
+| 调整自身策略（Layer C） | 修改 Drift Detection 阈值（安全机制不可自行修改） |
+
+---
+
+## 10. EventStream Positioning
+
+> **详细决策见**：`docs/decisions/ADR-003-eventstream-positioning.md`
+
+### 10.1 EventStream 的双重职责
+
+EventStream 不是普通消息队列。它同时承担两个职责：
+
+| 职责 | 说明 |
+|------|------|
+| 系统事实记录（System Fact Log） | 记录所有已发生的事件，事件不可变，支持按时间/类型/来源检索，支持 Replay |
+| 通信总线（Communication Bus） | 组件之间通过事件通信，发布-订阅模式，解耦组件依赖 |
+
+这两个职责不是分离的——同一条事件既是"事实记录"也是"通信消息"。
+
+### 10.2 EventStream 与 State Recovery 的关系
+
+EventStream 支持 Replay，但 **不承担完整状态恢复**。根据 §8 State Recovery Model：
+
+- Snapshot 是 Brain 状态的权威快照
+- EventStream 中的事件用于重放 Snapshot 之后的增量变化（Event Delta）
+- 完整状态 = Snapshot + EventStream Replay
+
+### 10.3 EventStream 与 Memory 的关系
+
+**EventStream ≠ Memory。** 两者分离但互补。
+
+| 维度 | EventStream | Memory |
+|------|-------------|--------|
+| 记录内容 | 系统事件（所有已发生事件） | 经历记录（用户经历 + 系统经历） |
+| 不可变性 | 事件不可变 | ADD-only（原始记录不可变，整理结果可更新） |
+| 用途 | 通信 + 事实记录 + 增量恢复 | 经历积累 + 知识提取 + 状态持久化 |
+| 时间模型 | 单时间（事件发生时间） | 双时间（valid_time + transaction_time） |
+
+- **所有 Experience 事件同时进入 EventStream 和 Memory**
+- **Brain 内部事件只进入 EventStream**（如 Self Model 更新、Goal 变更）
+- **Memory 的 Dream/Consolidation 输出进入 EventStream**
+
+### 10.4 Brain 内部事件化
+
+Brain 内部的 Identity、Memory、Self Model、Reflection、Goal、Agency 之间的所有跨组件**状态变更**必须通过 EventStream。
+
+**例外**：同步用户响应流中，允许 Brain 内部组件之间的直接**读取**（不是写入），以降低延迟。但状态变更必须通过事件。
+
+### 10.5 事件分类
+
+| 事件类别 | 来源 | 进入 Memory？ |
+|----------|------|---------------|
+| Experience Event | 用户消息、外部事件、Agent 执行结果 | 是 |
+| Brain State Event | Brain 内部组件状态变更 | 否 |
+| Agency Event | Agency 决策和行动 | 否 |
+| Execution Event | Execution Layer 执行过程 | 部分（执行结果进入） |
+| Reflection Event | Reflection 过程和输出 | 部分（策略调整进入 Self Model） |
+
+---
+
+## 附录 A：与 v1.1 Landscape Report 的对应关系
 
 | v1.1 报告章节 | 本文档对应章节 |
 |---------------|---------------|
@@ -509,4 +671,23 @@ Trigger(时间/Memory变化/Goal变化) → Decision Engine →
 >
 > 五大设计原则：Long-lived / Event-driven / Human-centric / Evolvable / Auditable。
 >
+> State Recovery Model：Brain = Source of Truth，Snapshot + Event Delta 恢复（§8 / ADR-001）。
+>
+> Evolution Boundary：三层演化——Immutable Core / Guided Evolution / Autonomous Evolution（§9 / ADR-002）。
+>
+> EventStream Positioning：系统事实记录 + 通信总线，支持 Replay，与 Memory 分离互补（§10 / ADR-003）。
+>
 > 本文档是后续详细架构设计的顶层蓝图。
+
+---
+
+## 附录 B：ADR Reference
+
+| ADR | 标题 | 状态 | 对应章节 |
+|-----|------|------|----------|
+| ADR-000 | Direction Correction: Digital Life Architecture | Accepted | §2 |
+| ADR-001 | State Recovery Model | Accepted | §8 |
+| ADR-002 | Evolution Boundary | Accepted | §9 |
+| ADR-003 | EventStream Positioning | Accepted | §10 |
+| ADR-004 | Brain Execution Boundary | Accepted | §4 |
+| ADR-005 | Agency Autonomy Boundary | Accepted | §4.1 Agency / §7.3 Human-centric |
