@@ -1,6 +1,6 @@
 # ADR-002: Evolution Boundary
 
-> **Status**: Accepted
+> **Status**: Proposed
 >
 > **Date**: 2026-08-07
 >
@@ -41,9 +41,9 @@ Personal-AI 的所有可演化内容分为三层，每层有不同的演化规�
 
 ```
 ┌─────────────────────────────────────────────┐
-│  Layer A: Immutable Core（不可演化核心）       │
-│  不可自动演化，不可通过 Reflection 改变        │
-│  只能通过用户显式操作改变                      │
+│  Layer A: Protected Core（受保护核心）          │
+│  AI 不可自主演化，不可通过 Reflection 改变      │
+│  用户可显式修改                                │
 ├─────────────────────────────────────────────┤
 │  Layer B: Guided Evolution（引导式演化）       │
 │  Reflection 可提议，需用户确认后生效           │
@@ -53,9 +53,11 @@ Personal-AI 的所有可演化内容分为三层，每层有不同的演化规�
 └─────────────────────────────────────────────┘
 ```
 
-### D2: Layer A — Immutable Core（不可演化核心）
+> **术语说明**：Protected Core（原名 Immutable Core）中的"Protected"意味着 AI 不可自主演化这些内容，但用户可以显式修改。这不是"创建后永久不可变更"，而是"AI 无权自行变更，变更权属于用户"。
 
-**定义**：Personal-AI 存在的基石，不可被 Reflection、Agency 或任何自动机制改变。
+### D2: Layer A — Protected Core（受保护核心）
+
+**定义**：Personal-AI 存在的基石，不可被 Reflection、Agency 或任何自动机制改变。用户可显式修改。
 
 | 内容 | 说明 |
 |------|------|
@@ -64,7 +66,7 @@ Personal-AI 的所有可演化内容分为三层，每层有不同的演化规�
 | 安全规则 | 不可执行的危险操作清单、不可访问的数据范围——只能由用户显式修改 |
 | 存在性定义 | Personal-AI 是"服务于特定用户的数字生命体"这一基本定义——不可被 Reflection 改为"服务于多个用户"或"自主决定服务对象" |
 
-**修改方式**：仅通过用户显式操作。Reflection 可以检测到 Immutable Core 需要调整的情况，但只能向用户提出建议，不能自动修改。
+**修改方式**：仅通过用户显式操作。Reflection 可以检测到 Protected Core 需要调整的情况，但只能向用户提出建议，不能自动修改。
 
 ### D3: Layer B — Guided Evolution（引导式演化）
 
@@ -82,7 +84,7 @@ Personal-AI 的所有可演化内容分为三层，每层有不同的演化规�
 ```
 Reflection 产出演化提议
     ↓
-与 Immutable Core 一致性检查
+    与 Protected Core 一致性检查
     ├── 冲突 → 拒绝，记录冲突原因
     └── 一致 → 提交给用户确认
                 ├── 用户确认 → 更新 Identity / Goal，记录版本历史
@@ -106,7 +108,7 @@ Reflection 产出演化提议
 ```
 Reflection 产出更新
     ↓
-与 Immutable Core 一致性检查
+    与 Protected Core 一致性检查
     ├── 冲突 → 拒绝，记录冲突原因，升级为 Guided Evolution 提议
     └── 一致 → 自动执行更新，记录版本历史
                 ↓
@@ -117,7 +119,7 @@ Reflection 产出更新
 
 | Reflection 可以改变 | Reflection 不能改变 |
 |---------------------|---------------------|
-| Self Model 的内容 | Immutable Core 的任何内容 |
+| Self Model 的内容 | Protected Core 的任何内容 |
 | 执行策略 | 用户授权边界 |
 | Project Goal / Task | Vision / Long Term Goal（只能提议） |
 | Memory 的整理和知识提取 | Memory 的原始经历记录（ADD-only） |
@@ -153,7 +155,7 @@ Drift Score 的计算方式和阈值在 Phase 2 详细设计中定义。本 ADR 
 
 ### 正面影响
 
-- **Identity Drift 防控**：Immutable Core + Drift Detection 双重保障，防止人格偏离
+- **Identity Drift 防控**：Protected Core + Drift Detection 双重保障，防止人格偏离
 - **用户主权保障**：重要演化需用户确认，符合 Human-centric 原则
 - **演化不失控**：三层边界明确，Reflection 的权限有清晰约束
 - **可审计**：所有演化（自动/引导）都有版本历史和原因记录
@@ -188,7 +190,7 @@ Drift Score 的计算方式和阈值在 Phase 2 详细设计中定义。本 ADR 
 
 ### Alt-3: Two-Layer Model（两层模型）
 
-**方案**：只有 Immutable Core + Autonomous Evolution，没有 Guided Evolution。
+**方案**：只有 Protected Core + Autonomous Evolution，没有 Guided Evolution。
 
 **为什么不选**：
 - Identity 人格特征要么完全固定（不灵活），要么完全自动（不可控）
@@ -199,8 +201,12 @@ Drift Score 的计算方式和阈值在 Phase 2 详细设计中定义。本 ADR 
 
 > **ADR-002 决策完成**
 >
-> 三层演化边界：Immutable Core / Guided Evolution / Autonomous Evolution。
+> 三层演化边界：Protected Core / Guided Evolution / Autonomous Evolution。
+>
+> Protected Core = AI 不可自主演化，用户可显式修改。不是"创建后永久不可变更"。
 >
 > Reflection 可改变 Self Model、策略、Project Goal；不可改变核心价值、用户授权、安全规则。
 >
 > Identity 演化需用户确认 + Drift Detection。
+>
+> **Phase 2 备注**：Goal provenance / ownership requires Phase 2 clarification, especially for user-authored goals versus AI-derived goals.

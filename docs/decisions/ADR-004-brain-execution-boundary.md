@@ -1,6 +1,6 @@
 # ADR-004: Brain Execution Boundary
 
-> **Status**: Accepted
+> **Status**: Proposed
 >
 > **Date**: 2026-08-07
 >
@@ -19,7 +19,7 @@
 
 ### 为什么需要这个决策
 
-Architecture Overview §3.2 定义了三层架构的层间关系："Brain 与 Execution 之间只通过 EventStream 通信——不直接调用"。§4.2 声明"Execution 是无状态的——重启后从 Brain 的 Memory 恢复上下文"。
+Architecture Overview §3.2 定义了三层架构的层间关系："Brain 与 Execution 之间只通过 EventStream 通信——不直接调用"。§4.2 声明 Execution 不持有 Digital Life 的权威长期状态（durable-state-free），允许运行期临时状态。
 
 但 Brain 和 Execution 的边界不够明确：
 
@@ -74,7 +74,11 @@ Execution 负责 Personal-AI 的**行动执行**和**运行时管理**。
 | Runtime 管理 | Agent 运行环境、资源隔离、生命周期管理 |
 | 执行监控 | 监控 Agent 执行状态，异常时通知 Brain |
 
-**关键约束**：Execution 不做任何"智能决策"。Execution 的所有行为由 Brain 的 Plan 驱动。
+**关键约束**：Cognitive / Intent Decision → Brain。Operational Decision → Execution。
+
+Execution 不做认知和意图层面的决策（如改 Goal、改用户意图、改 Identity、自主产生新的长期方向）。但 Execution 可以负责运行层面的操作决策：retry、timeout、backoff、runtime resource allocation、health check、scheduling implementation、Tool fallback under a Brain-approved Plan。
+
+Execution 的所有行为由 Brain 的 Plan 驱动——Execution 在 Brain 批准的 Plan 范围内有运行自主度，但不能越过 Plan 自行决定新的外部行动目标。
 
 ### D3: Planning 归属 Brain，不是 Execution
 
@@ -95,7 +99,7 @@ Plan（结构化执行方案）             ↓
 
 Planning 需要读取 Self Model（能力评估）、Memory（历史经验）、Goal（优先级），这些都是 Brain 的内部状态。如果 Planning 在 Execution 中，Execution 需要访问 Brain 内部状态，违反边界。
 
-### D4: Execution 禁止持久化任何 Brain 状态
+### D4: Execution 不持有 Digital Life 的权威长期状态（durable-state-free）
 
 | Execution 可以做 | Execution 禁止做 |
 |------------------|-------------------|
@@ -103,10 +107,10 @@ Planning 需要读取 Self Model（能力评估）、Memory（历史经验）、
 | 临时记录 Agent 执行日志（通过 EventStream 发送给 Brain） | 持久化 Memory |
 | 临时管理 Agent 生命周期状态（进程内） | 持久化 Self Model |
 | 临时缓存 Tool 连接信息 | 持久化 Goal |
-| | 持久化 Agency Initiative Queue |
-| | 持久化任何 Brain 组件的状态 |
+| 临时维护 retry 计数、timeout 状态、健康状态 | 持久化 Agency Initiative Queue |
+| | 持久化任何 Brain 组件的权威长期状态 |
 
-**原则**：Execution 重启后，不恢复任何自身状态。所有待执行任务从 Brain 的 Goal 和 Initiative Queue 重新获取。
+**原则**：Execution 不持有 Digital Life 的权威长期状态（durable-state-free）。允许运行期临时状态——这些状态可以存在、可以因重启丢失、可重建，不属于 Digital Life 权威长期状态。Execution 重启后，不恢复临时状态。所有待执行任务从 Brain 的 Goal 和 Initiative Queue 重新获取。
 
 ### D5: Brain 禁止直接调用 Tool
 
@@ -139,7 +143,7 @@ Execution
 ```
 
 Agent 的特征：
-- **无状态**——Agent 不持有任何跨任务的状态
+- **不持有权威长期状态**——Agent 不持有任何跨任务的 Digital Life 权威长期状态
 - **可替换**——Agent 可以被创建、销毁、替换，不影响 Brain
 - **生命周期短**——Agent 随 Task 创建，随 Task 完成而销毁
 - **通过 EventStream 与 Brain 交互**——Agent 不直接访问 Brain 内部状态
@@ -164,17 +168,17 @@ Agent 的特征：
 
 ### 正面影响
 
-- **状态安全**：Brain 状态不会泄漏到 Execution，Execution 重启不影响 Brain
+- **状态安全**：Brain 权威长期状态不会泄漏到 Execution，Execution 重启不影响 Brain
 - **Execution 可替换**：Execution 可以整体替换（换 Runtime、换 Agent 框架），不影响 Brain 连续性
-- **职责清晰**：Brain 做决策，Execution 做执行，无重叠
-- **Recovery 简化**：Execution 无状态，Recovery 只需恢复 Brain（ADR-001）
+- **职责清晰**：Brain 做认知/意图决策，Execution 做运行/操作决策，边界明确
+- **Recovery 简化**：Execution 不持有权威长期状态，Recovery 只需恢复 Brain（ADR-001）
 - **审计清晰**：所有 Brain → Execution 的指令通过 EventStream 记录
 
 ### 负面影响
 
 - **延迟**：Brain → EventStream → Execution → EventStream → Brain 的链路比直接调用有更高延迟
 - **上下文传输**：Agent 执行所需上下文必须通过 EventStream 传输，可能较大
-- **Execution 自主性受限**：Execution 不能自主决策，所有异常必须上报 Brain 等待指令
+- **Execution 自主性受限**：Execution 不能做认知/意图层面的决策，所有超出 Plan 范围的异常必须上报 Brain 等待指令
 
 ---
 
@@ -194,7 +198,7 @@ Agent 的特征：
 **方案**：Brain 和 Execution 共享部分状态（如 Memory），Execution 可直接读取 Memory。
 
 **为什么不选**：
-- Execution 变为有状态，重启后需要恢复——违反"Execution 无状态"原则
+- Execution 变为持有权威长期状态，重启后需要恢复——违反"Execution durable-state-free"原则
 - 状态一致性复杂——Brain 和 Execution 同时修改 Memory 时冲突
 - Execution 与 Brain 耦合，不可独立替换
 
@@ -205,7 +209,7 @@ Agent 的特征：
 **为什么不选**：
 - 引入第三类实体增加架构复杂度
 - Agent 有状态意味着需要 Agent 级别的 Recovery 机制
-- 违反"Brain = 状态，Execution = 行动"的清晰划分
+- 违反"Brain = 权威长期状态，Execution = 行动"的清晰划分
 - Agent 有状态会导致"哪个 Agent 做的"成为审计问题
 
 ---
@@ -214,8 +218,10 @@ Agent 的特征：
 >
 > Brain = Identity / State / Intelligence（含 Planning）。
 >
-> Execution = Action / Runtime（无状态，可替换）。
+> Execution = Action / Runtime（durable-state-free，可替换）。
 >
-> Execution 禁止持久化 Brain 状态。Brain 禁止直接调用 Tool。
+> Cognitive Decision → Brain。Operational Decision → Execution。
 >
-> Agent 是 Execution 的无状态子组件。
+> Execution 不持有 Digital Life 的权威长期状态。Brain 禁止直接调用 Tool。
+>
+> Agent 是 Execution 的不持有权威长期状态的子组件。

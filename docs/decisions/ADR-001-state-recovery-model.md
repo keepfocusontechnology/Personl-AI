@@ -1,6 +1,6 @@
 # ADR-001: State Recovery Model
 
-> **Status**: Accepted
+> **Status**: Proposed
 >
 > **Date**: 2026-08-07
 >
@@ -24,7 +24,7 @@ Personal-AI 的核心设计原则之一是 **Long-lived**——以 5-10 年连�
 - 长时间休眠后唤醒（用户数月不使用后回归）
 - 架构升级（数据格式迁移）
 
-Architecture Overview §4.1 声明"Brain Layer 的状态持久化在 Memory 中。Runtime 重启后，Brain 从 Memory 恢复全部状态"，但未定义恢复的具体机制和一致性保证。
+Architecture Overview §4.1 声明 Brain 持有 Digital Life 的权威长期状态，Brain 是认知状态的逻辑权威所有者（authoritative owner of cognitive state），但未定义恢复的具体机制和一致性保证。
 
 ### 未解决的核心问题
 
@@ -39,16 +39,20 @@ Architecture Overview §4.1 声明"Brain Layer 的状态持久化在 Memory 中�
 
 ## Decision
 
-### D1: Brain 是 Source of Truth，Memory 是 Brain 状态的持久化介质
+### D1: Brain 是认知状态的权威所有者，恢复依据是 Snapshot + Event Delta
 
-Brain 是 Personal-AI 状态的唯一权威来源。Execution Layer 和 Environment Layer 不持有权威状态。
+Brain 是 Personal-AI 认知状态的逻辑权威所有者（authoritative owner of cognitive state）。Execution Layer 和 Environment Layer 不持有权威长期状态。
 
-Brain 的全部状态通过 Memory 持久化。Memory 既是"经历记录"，也是"Brain 状态的持久化介质"——这两者在 Digital Life 架构中是统一的，不是分离的。
+Durable Brain State = Snapshot + committed Event Delta。Snapshot 可以由 Memory Storage 承载，但完整恢复路径依赖 Snapshot + EventStream，不是 Memory 单独保存 Brain 的全部状态。
+
+Memory 是认知/经历记忆（cognitive/experiential memory），不是"所有持久化东西的总称"。Brain Persistence 的范围大于 Memory——它包括 cognitive memory + Brain Snapshot（Identity 版本、Self Model 快照、Goal 状态、Agency Queue 状态）+ version history + Event Delta reference。
 
 ```
-Brain（运行时状态）
+Brain（运行时认知状态）
     ↕ 持久化 / 恢复
-Memory（持久化状态 + 经历记录）
+Snapshot + Event Delta
+    ↕ 承载
+Memory Storage（cognitive memory）+ EventStream（system events）
 ```
 
 ### D2: Brain 状态分为三类，采用不同的恢复策略
@@ -105,13 +109,13 @@ Memory 的"存储层"（持久化介质）与"运行时"（Brain 内的 Memory �
 
 ### D6: Execution Layer 的恢复行为
 
-Execution Layer 是无状态的，重启后：
+Execution Layer 不持有 Digital Life 的权威长期状态（durable-state-free），重启后：
 
-1. 不需要恢复任何自身状态
+1. 不需要恢复权威长期状态——运行期临时状态（Agent 执行上下文、retry 计数、Tool 连接缓存等）可丢失、可重建
 2. 从 Brain 的 Goal 和 Agency Initiative Queue 获取待执行任务
 3. 被中断的任务标记为"中断"状态，由 Brain 决定是否重试
 
-Execution Layer 的 Agent 运行时状态不持久化。被中断的 Agent 执行结果不恢复，由 Brain 的 Planning 重新分派。
+Execution Layer 的 Agent 运行时临时状态不持久化。被中断的 Agent 执行结果不恢复，由 Brain 的 Planning 重新分派。
 
 ---
 
@@ -123,7 +127,7 @@ Execution Layer 的 Agent 运行时状态不持久化。被中断的 Agent 执�
 - **Bootstrap 悖论解决**：Memory 存储层与运行时分离，启动顺序明确
 - **恢复效率**：Snapshot 避免了每次重启都从头重放全部事件
 - **审计能力**：Snapshot + Event Delta 模型天然支持状态历史追溯
-- **Execution 简化**：Execution 无状态，重启后无需复杂恢复逻辑
+- **Execution 简化**：Execution 不持有权威长期状态，重启后无需复杂恢复逻辑
 
 ### 负面影响
 
@@ -173,10 +177,10 @@ Execution Layer 的 Agent 运行时状态不持久化。被中断的 Agent 执�
 
 > **ADR-001 决策完成**
 >
-> Brain 是 Source of Truth，Memory 是持久化介质。
+> Brain = authoritative owner of cognitive state。Recovery authority = latest valid Snapshot + committed Event Delta。
 >
-> 恢复模型：Snapshot + Event Delta。
+> Durable Brain State = Snapshot + committed Event Delta。
 >
 > Bootstrap：Memory 存储层优先启动，然后恢复 Brain 运行时。
 >
-> Execution 无状态，重启后从 Brain 获取待执行任务。
+> Execution 不持有权威长期状态，重启后从 Brain 获取待执行任务。

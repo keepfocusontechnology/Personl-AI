@@ -32,7 +32,7 @@
 
 ### 1.1 一句话定义
 
-**Personal-AI 是一个长期存在的数字生命体（Digital Life Entity），以 Brain 为核心，具备身份连续、经验积累、自我认知、反思学习、目标驱动和主动行动能力，通过无状态 Agent 执行具体任务。**
+**Personal-AI 是一个长期存在的数字生命体（Digital Life Entity），以 Brain 为核心，具备身份连续、经验积累、自我认知、反思学习、目标驱动和主动行动能力，通过不持有权威长期状态的 Agent 执行具体任务。**
 
 ### 1.2 展开定义
 
@@ -49,7 +49,7 @@ Personal-AI 是一个**持续存在的数字实体**，它：
 | 学习 | 通过反思从过去学习，区分记忆整理和行为复盘——Reflection 回答"我如何从过去学习" |
 | 方向 | 有从 Vision 到 Task 的长期目标层级——Goal 回答"我要帮助用户走向哪里" |
 | 主动性 | 能主动发现需要关注的时刻，主动建议、提醒、行动——Agency 回答"我什么时候应该主动行动" |
-| 执行 | 通过无状态 Agent 将 Goal 转化为 Action——Execution 回答"我如何把 Goal 变成 Action" |
+| 执行 | 通过不持有权威长期状态的 Agent 将 Goal 转化为 Action——Execution 回答"我如何把 Goal 变成 Action" |
 
 ### 1.3 Personal-AI ≠ 什么
 
@@ -141,6 +141,11 @@ Agency 和 Self Model 是闭环的必要条件：
 │  │          └───────────┬───────────┘                           │  │
 │  │                      │                                       │  │
 │  │                ┌─────┴─────┐                                 │  │
+│  │                │ Planning  │  Brain 内部认知能力：            │  │
+│  │                │ 规划生成   │  从 Goal 生成执行 Plan           │  │
+│  │                └─────┬─────┘                                 │  │
+│  │                      │                                       │  │
+│  │                ┌─────┴─────┐                                 │  │
 │  │                │EventStream│  所有组件通过事件通信             │  │
 │  │                └─────┬─────┘                                 │  │
 │  └──────────────────────┼───────────────────────────────────────┘  │
@@ -150,21 +155,17 @@ Agency 和 Self Model 是闭环的必要条件：
 │  │              Layer 2: Execution Layer                        │  │
 │  │                  ┘                                           │  │
 │  │                                                               │
-│  │   ┌──────────┐  ┌────────────────┐  ┌──────────────┐        │  │
-│  │   │ Planning │  │    Agent       │  │    Tools     │        │  │
-│  │   │ 规划分派  │  │ Orchestration  │  │  MCP / API   │        │  │
-│  │   └────┬─────┘  └───────┬────────┘  └──────┬───────┘        │  │
-│  │        │                │                   │                │  │
-│  │        └────────────────┼───────────────────┘                │  │
-│  │                         │                                    │  │
-│  │                   ┌─────┴─────┐                              │  │
-│  │                   │  Runtime  │  无状态执行环境                │  │
-│  │                   └─────┬─────┘                              │  │
-│  │                         │                                    │  │
-│  │              ┌──────────┴──────────┐                         │  │
-│  │              │    Agent Pool       │  无状态执行单元           │  │
-│  │              │  (可创建/销毁/替换)  │                         │  │
-│  │              └─────────────────────┘                         │  │
+│  │   ┌────────────────┐  ┌──────────────┐  ┌──────────────┐    │  │
+│  │   │    Agent       │  │    Tools     │  │   Runtime    │    │  │
+│  │   │ Orchestration  │  │  MCP / API   │  │  执行环境     │    │  │
+│  │   └───────┬────────┘  └──────┬───────┘  └──────┬───────┘    │  │
+│  │           │                  │                  │             │  │
+│  │           └──────────────────┼──────────────────┘             │  │
+│  │                              │                                │  │
+│  │              ┌───────────────┴───────────────┐                │  │
+│  │              │       Agent Pool              │                │  │
+│  │              │  不持有权威长期状态的执行单元   │                │  │
+│  │              └───────────────────────────────┘                │  │
 │  └──────────────────────┼───────────────────────────────────────┘  │
 │                         │                                           │
 │  ┌──────────────────────┼───────────────────────────────────────┐  │
@@ -189,18 +190,18 @@ Agency 和 Self Model 是闭环的必要条件：
 ### 3.2 层间关系
 
 ```
-    Brain Layer（有状态，持续存在）
+    Brain Layer（持有 Digital Life 权威长期状态，持续存在）
          │
     EventStream（事件总线，唯一通信通道）
          │
-    Execution Layer（无状态，可重启）
+    Execution Layer（不持有权威长期状态，可重启）
          │
     Environment Layer（外部世界）
 ```
 
 关键约束：
 - **Brain 与 Execution 之间只通过 EventStream 通信**——不直接调用
-- **Execution 是无状态的**——重启后从 Brain 的 Memory 恢复上下文
+- **Execution 不持有 Digital Life 的权威长期状态**——允许运行期临时状态（如 Agent 执行上下文、retry 计数、Tool 连接缓存），这些状态可因重启丢失、可重建。重启后从 Brain 获取待执行任务
 - **Environment 是感知和行动的边界**——Brain 不直接接触外部世界，通过 Execution + Environment 间接交互
 
 ---
@@ -211,36 +212,49 @@ Agency 和 Self Model 是闭环的必要条件：
 
 **职责**：定义 Personal-AI 的存在本质，维护持续状态，驱动闭环演化。
 
-Brain Layer 是 Personal-AI 的核心——它是"数字生命"中"生命"的部分。Brain 有状态、持续存在、不可重置。
+Brain Layer 是 Personal-AI 的核心——它是"数字生命"中"生命"的部分。Brain 持有 Digital Life 的权威长期状态，持续存在，不可重置。
 
 | 组件 | 职责 | 核心问题 |
 |------|------|----------|
 | **Identity** | 维护人格、价值观、行为原则、用户关系定义。可演化但有规则约束。 | 我是谁？ |
-| **Memory** | 记录、存储、检索经历。ADD-only + 双时间模型 + 非有损演化。 | 我经历过什么？ |
+| **Memory** | 记录、存储、检索经历。ADD-only + 双时间模型 + 非有损演化。Memory 是认知/经历记忆，不是"所有持久化东西的总称"。 | 我经历过什么？ |
 | **Self Model** | 动态自我认知：能力边界、用户关系理解、行为总结、优势不足、当前状态。 | 我如何理解自己？ |
 | **Reflection** | 元认知能力。Memory Reflection（整理经历、提取知识）+ Behavior Reflection（评估行为、调整策略）。 | 我如何从过去学习？ |
 | **Goal** | 长期方向感。Vision → Long Term Goal → Project Goal → Task 层级。支持目标追踪、分解、调整。 | 我要帮助用户走向哪里？ |
 | **Agency** | 主动行动能力。Trigger System（发现时机）+ Decision Engine（判断行动）+ Initiative Queue（管理主动请求）。 | 我什么时候应该主动行动？ |
 
-Brain Layer 的状态持久化在 Memory 中。Runtime 重启后，Brain 从 Memory 恢复全部状态。
+**Planning 是 Brain 的内部认知能力，不是 Execution Layer 的组件，也不是第七个 Brain 核心能力。** Planning 从 Goal 生成执行 Plan，需要读取 Self Model（能力评估）、Memory（历史经验）、Goal（优先级），这些都是 Brain 的内部状态。Plan 是 Brain 的智能输出，通过 EventStream 发送给 Execution Layer 执行。
+
+Brain 是认知状态的逻辑权威所有者（authoritative owner of cognitive state）。在 Crash / Restart / Migration 场景下，Brain 的恢复依据不是运行中的 Brain 本身，而是：
+
+`Recovery authority = latest valid Snapshot + committed Event Delta`
+
+Durable Brain State = Snapshot + committed Event Delta。Snapshot 可以由 Memory Storage 承载，但完整恢复路径依赖 Snapshot + EventStream，不是 Memory 单独保存 Brain 的全部状态。
 
 ### 4.2 Layer 2: Execution Layer
 
-**职责**：将 Brain 的 Goal 和 Agency 决策转化为具体行动，通过 Agent 执行任务。
+**职责**：接收 Brain 的 Plan，通过 Agent 执行具体任务，返回执行结果。
 
-Execution Layer 是无状态的——它是"数字生命"中"手脚"的部分。Execution 可以重启、替换、扩展，不影响 Brain 的连续性。
+Execution Layer 不持有 Digital Life 的权威长期状态——它是"数字生命"中"手脚"的部分。Execution 可以重启、替换、扩展，不影响 Brain 的连续性。
 
 | 组件 | 职责 |
 |------|------|
-| **Planning** | 从 Goal 生成执行计划。考虑 Self Model 的能力评估、资源约束、优先级。 |
 | **Agent Orchestration** | 调度多个 Agent 协作执行。管理 Agent 生命周期（创建、分配、监控、回收）。 |
 | **Tools** | 工具执行层。通过 MCP 协议连接外部工具。Agent 通过 Tools 完成具体操作。 |
-| **Runtime** | 无状态执行环境。提供 Agent 运行所需的计算资源、上下文管理、隔离机制。 |
+| **Runtime** | 执行环境。提供 Agent 运行所需的计算资源、上下文管理、隔离机制。 |
 
 Execution Layer 的设计原则：
-- **无状态**——所有状态在 Brain 的 Memory 中
+- **不持有权威长期状态（durable-state-free）**——Execution 不拥有 Digital Life 的权威长期状态。允许运行期临时状态（如 Agent 执行上下文、retry 计数、timeout 状态、临时工作区、Tool 连接缓存、健康状态），这些状态可以存在、可以因重启丢失、可重建，不属于 Digital Life 权威长期状态
 - **可替换**——Agent 可以被创建、销毁、替换
 - **通过 EventStream 通信**——不直接访问 Brain 内部状态
+
+**Cognitive / Intent Decision → Brain。Operational Decision → Execution。**
+
+Brain 负责认知和意图层面的决策：Goal 解释、Planning、用户意图判断、Agency Decision、Identity / Self Model / Reflection、是否改变策略方向。
+
+Execution 可以负责运行层面的操作决策：retry、timeout、backoff、runtime resource allocation、health check、scheduling implementation、Tool fallback under a Brain-approved Plan。
+
+Execution 不允许：改 Goal、改用户意图、改 Identity、自主产生新的长期方向、越过 Brain 自行决定新的外部行动目标。
 
 ### 4.3 Layer 3: Environment Layer
 
@@ -274,14 +288,14 @@ Environment Layer 的设计原则：
 │  ┌──────────┐ ┌────────┐ ┌────────────┐ ┌──────────┐      │
 │  │ Identity │ │ Memory │ │ Self Model │ │Reflection│      │
 │  └──────────┘ └────────┘ └────────────┘ └──────────┘      │
-│  ┌──────────┐ ┌────────┐                                  │
-│  │   Goal   │ │ Agency │                                  │
-│  └──────────┘ └────────┘                                  │
+│  ┌──────────┐ ┌────────┐ ┌──────────┐                     │
+│  │   Goal   │ │ Agency │ │ Planning │  (Brain 内部认知能力) │
+│  └──────────┘ └────────┘ └──────────┘                     │
 │                                                             │
 │  Execution Layer                                            │
-│  ┌──────────┐ ┌────────────────┐ ┌───────┐ ┌────────┐     │
-│  │ Planning │ │ Agent Orch.    │ │ Tools │ │ Runtime│     │
-│  └──────────┘ └────────────────┘ └───────┘ └────────┘     │
+│  ┌────────────────┐ ┌───────┐ ┌────────┐                  │
+│  │ Agent Orch.    │ │ Tools │ │ Runtime│                  │
+│  └────────────────┘ └───────┘ └────────┘                  │
 │                                                             │
 │  Environment Layer                                          │
 │  ┌──────────┐ ┌───────┐ ┌──────┐ ┌──────────────────────┐ │
@@ -301,7 +315,7 @@ Environment Layer 的设计原则：
 | Reflection | Brain | 我如何从过去学习？ | 元认知能力，区分 Memory Reflection（整理经历）和 Behavior Reflection（评估行为） |
 | Goal | Brain | 我要帮助用户走向哪里？ | Vision → Long Term Goal → Project Goal → Task 的长期方向感 |
 | Agency | Brain | 我什么时候应该主动行动？ | Trigger + Decision + Initiative Queue，从被动响应到主动存在 |
-| Execution | Execution | 我如何把 Goal 变成 Action？ | Planning → Agent Orchestration → Tools → Runtime 的完整执行链路 |
+| Execution | Execution | 我如何把 Goal 变成 Action？ | Agent Orchestration → Tools → Runtime 的完整执行链路（Plan 由 Brain 生成） |
 
 ### 5.3 能力间依赖关系
 
@@ -315,14 +329,14 @@ Identity ──────约束──────→ Agency
          Memory ←─────────┘              │
            ↑                             │
            │                             ↓
-    Experience ──────────────────→ Execution ──→ Action ──→ New Experience
+    Experience ──────────────────→ Planning ──→ Execution ──→ Action ──→ New Experience
 ```
 
 解读：
 - **Identity 约束 Agency**——Agency 的决策必须符合 Identity 的行为原则
 - **Self Model 连接 Identity 和 Memory**——从 Memory 提炼自我理解，与 Identity 做一致性检查
 - **Reflection 输入 Memory，输出更新 Self Model 和 Goal**——闭环演化的核心引擎
-- **Goal 驱动 Execution**——Execution 将 Goal 转化为 Action
+- **Goal 驱动 Planning，Planning 驱动 Execution**——Planning 是 Brain 内部认知能力，从 Goal 生成 Plan，Execution 执行 Plan
 - **Action 产生 New Experience**——闭环回到 Memory
 
 ---
@@ -366,12 +380,17 @@ Identity ──────约束──────→ Agency
 │      │  Decision：判断是否行动、如何行动                  │
 │      │  Initiative：产生建议/提醒/计划/行动请求           │
 │      ▼                                                   │
+│   Planning（规划生成 — Brain 内部认知能力）               │
+│      │                                                   │
+│      │  从 Goal 生成执行 Plan                            │
+│      │  读取 Self Model（能力评估）、Memory（历史经验）    │
+│      │  Plan 通过 EventStream 发送给 Execution            │
+│      ▼                                                   │
 │   Execution（执行）                                      │
 │      │                                                   │
-│      │  Planning：从 Goal 生成 Plan                      │
-│      │  Agent Orchestration：调度 Agent                  │
+│      │  Agent Orchestration：调度 Agent 执行 Plan         │
 │      │  Tools：Agent 调用工具                             │
-│      │  Runtime：无状态执行                               │
+│      │  Runtime：执行环境（不持有权威长期状态）            │
 │      ▼                                                   │
 │   Action（行动）                                         │
 │      │                                                   │
@@ -399,7 +418,7 @@ Identity ──────约束──────→ Agency
 #### 同步流（用户请求驱动）
 
 ```
-用户消息 → Memory(Retain) → Self Model(快速更新) → Execution(Planning→Agent→Result)
+用户消息 → Memory(Retain) → Self Model(快速更新) → Planning(生成Plan) → Execution(Agent→Result)
     → Memory(Retain结果) → 返回用户
 ```
 
@@ -411,7 +430,7 @@ Identity ──────约束──────→ Agency
 Trigger(时间/Memory变化/Goal变化) → Decision Engine → 
     → Reflection(异步整理+评估) → Self Model(更新) → Goal(演化) → 
     → Initiative(建议/提醒/计划) → 等待用户确认或自动执行 → 
-    → Execution → Action → New Experience
+    → Planning(生成Plan) → Execution → Action → New Experience
 ```
 
 异步流是 Agency 的主要运转模式，不阻塞用户交互。
@@ -499,11 +518,11 @@ Trigger(时间/Memory变化/Goal变化) → Decision Engine →
 
 Personal-AI 是长期存在的数字生命体，必须能够在任何故障后恢复到一致状态。State Recovery Model 定义了 Brain 状态的恢复机制。
 
-**Brain 是 Source of Truth，Memory 是持久化介质。**
+**Brain 是认知状态的逻辑权威所有者（authoritative owner of cognitive state）。恢复依据是 latest valid Snapshot + committed Event Delta。**
 
-- Brain 的运行时状态（Identity 当前版本、Self Model 当前快照、Goal 当前状态、Agency Initiative Queue）是权威状态
-- Memory 存储层是 Brain 状态的持久化介质——Brain 状态通过 Snapshot 持久化到 Memory
-- EventStream 记录所有系统事件，用于重放 Snapshot 之后的增量变化
+- Brain 的运行时状态（Identity 当前版本、Self Model 当前快照、Goal 当前状态、Agency Initiative Queue）是权威认知状态
+- Durable Brain State = Snapshot + committed Event Delta。Snapshot 可以由 Memory Storage 承载，但完整恢复路径依赖 Snapshot + EventStream，不是 Memory 单独保存 Brain 的全部状态
+- EventStream 记录所有系统事件，用于重放 Snapshot 之后的增量变化（Event Delta）
 
 ### 8.2 恢复模型：Snapshot + Event Delta
 
@@ -520,7 +539,7 @@ Personal-AI 是长期存在的数字生命体，必须能够在任何故障后�
 |----------|----------|------|
 | Brain 运行时状态 | Snapshot + Event Delta | 权威恢复路径 |
 | Memory 存储层 | 直接加载 | 存储层独立于 Brain 运行时 |
-| Execution | 无状态，不恢复 | 重启后从 Brain 获取待执行任务 |
+| Execution | 不持有权威长期状态，不恢复 | 运行期临时状态可丢失，重启后从 Brain 获取待执行任务 |
 | EventStream | 直接加载 | 持久化事件日志，不依赖 Brain |
 
 ### 8.3 Bootstrap 顺序
@@ -553,8 +572,9 @@ Personal-AI 必须能够演化，但演化必须有边界。演化能力分为�
 
 ```
 ┌──────────────────────────────────────────────────┐
-│  Layer A: Immutable Core（不可演化）               │
-│  核心价值、用户授权、安全规则——创建后不可变更       │
+│  Layer A: Protected Core（受保护核心）              │
+│  核心价值、用户授权、安全规则                       │
+│  非自主可演化——AI 不可自主修改，用户可显式修改       │
 ├──────────────────────────────────────────────────┤
 │  Layer B: Guided Evolution（引导式演化）           │
 │  Identity 人格特征、Vision / Long Term Goal、      │
@@ -566,11 +586,13 @@ Personal-AI 必须能够演化，但演化必须有边界。演化能力分为�
 └──────────────────────────────────────────────────┘
 ```
 
+> **术语说明**：Protected Core（原名 Immutable Core）中的"Protected"意味着 AI 不可自主演化这些内容，但用户可以显式修改。这不是"创建后永久不可变更"，而是"AI 无权自行变更，变更权属于用户"。
+
 ### 9.2 各层边界
 
-| 层级 | 可演化内容 | 演化方式 | 不可演化内容 |
-|------|-----------|----------|-------------|
-| Layer A | — | — | 核心价值、用户授权边界、安全规则 |
+| 层级 | 可演化内容 | 演化方式 | 不可自主演化内容 |
+|------|-----------|----------|-----------------|
+| Layer A | 用户可显式修改 | 用户显式操作 | 核心价值、用户授权边界、安全规则（AI 不可自主修改） |
 | Layer B | Identity 人格特征、Vision、Long Term Goal、用户关系 | Reflection 提议 → 用户确认 → 生效 | 核心价值、用户授权、安全规则 |
 | Layer C | Self Model、Project Goal / Task、执行策略、Reflection 策略 | Reflection 自动 → 事后通知 | Layer A + Layer B 的内容 |
 
@@ -588,7 +610,7 @@ Reflection 是演化的引擎，但 Reflection 本身也受边界约束：
 
 | Reflection 可以做 | Reflection 不可以做 |
 |-------------------|---------------------|
-| 提议 Layer B 变更（需用户确认） | 直接变更 Layer A |
+| 提议 Layer B 变更（需用户确认） | 自主变更 Layer A（Protected Core，只有用户可显式修改） |
 | 自动执行 Layer C 变更（事后通知） | 直接变更 Layer B（绕过用户确认） |
 | 调整自身策略（Layer C） | 修改 Drift Detection 阈值（安全机制不可自行修改） |
 
@@ -665,17 +687,21 @@ Brain 内部的 Identity、Memory、Self Model、Reflection、Goal、Agency 之�
 
 > **Architecture Overview 完成**
 >
-> Personal-AI OS 三层架构：Brain Layer（6 核心能力）+ Execution Layer（4 组件）+ Environment Layer（5 组件）。
+> Personal-AI OS 三层架构：Brain Layer（6 核心能力 + Planning 内部认知能力）+ Execution Layer（3 组件：Agent Orchestration / Tools / Runtime）+ Environment Layer（5 组件）。
 >
-> 闭环数据流：Experience → Memory → Self Model → Reflection → Goal → Agency → Execution → New Experience。
+> 闭环数据流：Experience → Memory → Self Model → Reflection → Goal → Agency → Planning → Execution → Action → New Experience。
 >
 > 五大设计原则：Long-lived / Event-driven / Human-centric / Evolvable / Auditable。
 >
-> State Recovery Model：Brain = Source of Truth，Snapshot + Event Delta 恢复（§8 / ADR-001）。
+> State Recovery Model：Brain = authoritative owner of cognitive state，Recovery authority = latest valid Snapshot + committed Event Delta（§8 / ADR-001）。
 >
-> Evolution Boundary：三层演化——Immutable Core / Guided Evolution / Autonomous Evolution（§9 / ADR-002）。
+> Evolution Boundary：三层演化——Protected Core / Guided Evolution / Autonomous Evolution（§9 / ADR-002）。
 >
 > EventStream Positioning：系统事实记录 + 通信总线，支持 Replay，与 Memory 分离互补（§10 / ADR-003）。
+>
+> Brain Execution Boundary：Cognitive Decision → Brain，Operational Decision → Execution（§4 / ADR-004）。
+>
+> Agency Autonomy Boundary：三级权限——Autonomous Observation / Autonomous Suggestion / Conditional Execution（§4.1 / §7.3 / ADR-005）。
 >
 > 本文档是后续详细架构设计的顶层蓝图。
 
@@ -686,8 +712,8 @@ Brain 内部的 Identity、Memory、Self Model、Reflection、Goal、Agency 之�
 | ADR | 标题 | 状态 | 对应章节 |
 |-----|------|------|----------|
 | ADR-000 | Direction Correction: Digital Life Architecture | Accepted | §2 |
-| ADR-001 | State Recovery Model | Accepted | §8 |
-| ADR-002 | Evolution Boundary | Accepted | §9 |
-| ADR-003 | EventStream Positioning | Accepted | §10 |
-| ADR-004 | Brain Execution Boundary | Accepted | §4 |
-| ADR-005 | Agency Autonomy Boundary | Accepted | §4.1 Agency / §7.3 Human-centric |
+| ADR-001 | State Recovery Model | Proposed | §8 |
+| ADR-002 | Evolution Boundary | Proposed | §9 |
+| ADR-003 | EventStream Positioning | Proposed | §10 |
+| ADR-004 | Brain Execution Boundary | Proposed | §4 |
+| ADR-005 | Agency Autonomy Boundary | Proposed | §4.1 Agency / §7.3 Human-centric |

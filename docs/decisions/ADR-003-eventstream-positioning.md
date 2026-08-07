@@ -1,6 +1,6 @@
 # ADR-003: EventStream Positioning
 
-> **Status**: Accepted
+> **Status**: Proposed
 >
 > **Date**: 2026-08-07
 >

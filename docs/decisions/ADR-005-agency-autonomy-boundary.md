@@ -1,6 +1,6 @@
 # ADR-005: Agency Autonomy Boundary
 
-> **Status**: Accepted
+> **Status**: Proposed
 >
 > **Date**: 2026-08-07
 >
@@ -50,10 +50,11 @@ Agency 的主动性分为三个权限层级，每层有不同的自主度：
 ```
 ┌─────────────────────────────────────────────┐
 │  Level 1: Autonomous Observation（自主观察）  │
-│  无需用户许可，自动执行                        │
+│  在用户已授予的数据访问权限范围内，              │
+│  无需逐次确认，自动执行                          │
 ├─────────────────────────────────────────────┤
 │  Level 2: Autonomous Suggestion（自主建议）   │
-│  无需用户许可，自动产生建议，但只呈现不执行     │
+│  无需逐次确认，自动产生建议，但只呈现不执行     │
 ├─────────────────────────────────────────────┤
 │  Level 3: Conditional Execution（条件执行）   │
 │  Low-risk 自动执行 + 事后通知                  │
@@ -63,7 +64,7 @@ Agency 的主动性分为三个权限层级，每层有不同的自主度：
 
 ### D2: Level 1 — Autonomous Observation（自主观察）
 
-**定义**：Agency 可以自主观察系统状态和外部环境，无需用户许可。
+**定义**：Agency 可以自主观察系统状态和外部环境，在用户已授予的数据访问权限范围内，无需逐次确认。
 
 | Agency 可以做 | 说明 |
 |---------------|------|
@@ -75,11 +76,11 @@ Agency 的主动性分为三个权限层级，每层有不同的自主度：
 | 更新 Self Model | 根据 Reflection 输出更新自我认知（ADR-002 Layer C） |
 | 记录 Trigger 和 Decision | 所有触发和决策记录到 EventStream |
 
-**约束**：观察行为本身不产生任何外部影响。观察结果只进入 Brain 内部，不通知用户、不执行行动。
+**约束**：观察行为本身不产生任何外部影响。观察结果只进入 Brain 内部，不通知用户、不执行行动。所有外部观察受 pre-authorized user permission scope 约束——Agency 不能观察用户未授权的数据范围。
 
 ### D3: Level 2 — Autonomous Suggestion（自主建议）
 
-**定义**：Agency 可以自主产生建议并呈现给用户，无需事前许可，但建议只呈现不执行。
+**定义**：Agency 可以自主产生建议并呈现给用户，无需逐次确认，但建议只呈现不执行。
 
 | Agency 可以做 | 说明 |
 |---------------|------|
@@ -181,7 +182,7 @@ Agency 的所有行为受以下约束：
 
 | 约束 | 来源 | 说明 |
 |------|------|------|
-| Identity 约束 | ADR-002 Layer A | Agency 的所有决策必须符合 Immutable Core |
+| Identity 约束 | ADR-002 Layer A | Agency 的所有决策必须符合 Protected Core |
 | 用户授权边界 | ADR-002 Layer A | Agency 不能超越用户定义的权限范围 |
 | 频率控制 | 本 ADR D3 | 建议和通知有频率限制 |
 | 透明性 | Architecture Overview §7.5 | 所有 Agency 行为可追溯、可审计 |
