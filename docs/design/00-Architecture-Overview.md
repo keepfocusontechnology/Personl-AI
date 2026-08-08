@@ -712,8 +712,8 @@ Brain 内部的 Identity、Memory、Self Model、Reflection、Goal、Agency 之�
 | ADR | 标题 | 状态 | 对应章节 |
 |-----|------|------|----------|
 | ADR-000 | Direction Correction: Digital Life Architecture | Accepted | §2 |
-| ADR-001 | State Recovery Model | Proposed | §8 |
-| ADR-002 | Evolution Boundary | Proposed | §9 |
-| ADR-003 | EventStream Positioning | Proposed | §10 |
-| ADR-004 | Brain Execution Boundary | Proposed | §4 |
-| ADR-005 | Agency Autonomy Boundary | Proposed | §4.1 Agency / §7.3 Human-centric |
+| ADR-001 | State Recovery Model | Accepted | §8 |
+| ADR-002 | Evolution Boundary | Accepted | §9 |
+| ADR-003 | EventStream Positioning | Accepted | §10 |
+| ADR-004 | Brain Execution Boundary | Accepted | §4 |
+| ADR-005 | Agency Autonomy Boundary | Accepted | §4.1 Agency / §7.3 Human-centric |
