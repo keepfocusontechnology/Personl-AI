@@ -1,6 +1,6 @@
 # Memory Architecture
 
-> **Status**: Proposed
+> **Status**: Accepted (FROZEN)
 >
 > **Phase**: 2.1 — Memory Architecture
 >
@@ -573,7 +573,7 @@ Memory
 │   ├── User Memory（用户认知）
 │   ├── Project Memory（项目认知）
 │   └── Consolidation Output（整理结果）
-└── User Control Layer（用户控制层）
+└── User Control Plane（用户控制面）
     ├── Deletion Log（删除记录）
     ├── Correction Log（修正记录）
     └── Provenance Metadata（溯源元数据）
@@ -592,7 +592,7 @@ Memory
 **缺点**：
 - 架构复杂度较高
 - 用户控制层需要额外设计
-- 三层结构增加维护成本
+- 两层认知层 + 控制面增加维护成本
 
 **为什么推荐**：在完整性和用户控制之间取得平衡，符合 Personal-AI 的所有冻结约束和设计原则。
 
@@ -637,7 +637,7 @@ Memory
 │  └─────────────────────────────────────────────────┘     │
 │                                                           │
 │  ┌─────────────────────────────────────────────────┐     │
-│  │          User Control Layer（用户控制层）         │     │
+│  │          User Control Plane（用户控制面）         │     │
 │  │                                                   │     │
 │  │  ┌──────────────┐  ┌──────────────┐              │     │
 │  │  │ Deletion Log  │  │ Correction   │              │     │
@@ -657,7 +657,7 @@ Memory
 └─────────────────────────────────────────────────────────┘
 ```
 
-### 14.3 三层结构说明
+### 14.3 结构说明
 
 #### Raw Layer（原始层）
 
@@ -679,7 +679,7 @@ Memory
 | 修改者 | Reflection（自动）+ 用户（显式修正） |
 | 溯源 | 每条记录关联 source Raw Layer 记录 + consolidation_history |
 
-#### User Control Layer（用户控制层）
+#### User Control Plane（用户控制面）
 
 | 属性 | 值 |
 |------|-----|
@@ -688,7 +688,7 @@ Memory
 | 作用 | 记录用户对 Memory 的所有控制操作 |
 | 约束 | 用户删除后保留溯源元数据，不保留记忆内容 |
 
-### 14.4 生命周期与三层结构的关系
+### 14.4 生命周期与结构的关系
 
 ```
 Experience Event
@@ -703,7 +703,7 @@ Derived Layer（Semantic + User + Project + Consolidation Output）
 Brain 组件（Planning / Agency / 用户响应 / Self Model）
     │
     ↓ User Control
-User Control Layer（Deletion Log + Correction Log + Provenance）
+User Control Plane（Deletion Log + Correction Log + Provenance）
 ```
 
 ### 14.5 Memory 与其他 Brain 组件的接口
@@ -717,7 +717,7 @@ User Control Layer（Deletion Log + Correction Log + Provenance）
 | Memory → Planning | 读取 | Planning 从 Memory 获取历史经验 |
 | Memory → Agency | 读取/触发 | Agency 监控 Memory 变化（Level 1 自主观察） |
 | Memory → 用户响应流 | 读取 | 用户响应时 Recall 相关记忆组装上下文 |
-| User → Memory | 控制 | 用户通过 User Control Layer 操作 Memory |
+| User → Memory | 控制 | 用户通过 User Control Plane 操作 Memory |
 
 **关键约束**：
 - Memory 只提供数据，不做结论——Memory 不替 Self Model 评估能力，不替 Goal 设定方向，不替 Agency 做决策
@@ -1019,7 +1019,7 @@ Identity 的核心语义是 Personal-AI "我是谁"，**不是完整 User Profil
 | # | 决策 | 说明 |
 |---|------|------|
 | D-1 | Memory = cognitive/experiential memory | 不是所有持久化数据的总称（ADR-001 冻结） |
-| D-2 | Memory 采用三层结构 | Raw Layer（ADD-only）+ Derived Layer（非有损演化）+ User Control Layer |
+| D-2 | Memory 采用两层认知层 + 用户控制面 | Raw Layer（ADD-only）+ Derived Layer（非有损演化）+ User Control Plane |
 | D-3 | 双时间模型是架构级原则 | 所有 Memory 记录采用 valid_time + transaction_time |
 | D-4 | ADD-only 精确定义 | Historical Immutability + Logical Invalidation + User Deletion + Physical Deletion |
 | D-5 | Consolidation 由 Reflection 执行 | Memory 不执行整理逻辑，Reflection 执行并写入 Memory |
@@ -1055,10 +1055,10 @@ Identity 的核心语义是 Personal-AI "我是谁"，**不是完整 User Profil
 
 ---
 
-> **文档状态：Proposed**
+> **文档状态：Accepted (FROZEN)**
 >
-> 本文档是 Phase 2.1 Memory Architecture 的输出，包含 12 个 Architecture Questions 的分析、三种架构选项的比较、推荐方案（Option C）、12 个架构不变量、14 个 Deferred Decisions、8 个 Resolved Architecture Questions（OQ-1~OQ-8 已完成 Principal Architect Decision Reconciliation）。
+> 本文档是 Phase 2.1 Memory Architecture 的输出，包含 12 个 Architecture Questions 的分析、三种架构选项的比较、推荐方案（Option C）、15 个架构不变量、14 个 Deferred Decisions、8 个 Resolved Architecture Questions（OQ-1~OQ-8 已完成 Principal Architect Decision Reconciliation）。
 >
 > **Open Questions**: No blocking open architecture questions remain for Phase 2.1.
 >
-> **Status**: Phase 2.1 Memory Architecture — Ready for Final Principal Architect Review
+> **Status**: Phase 2.1 Memory Architecture — FROZEN

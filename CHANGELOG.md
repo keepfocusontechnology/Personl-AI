@@ -6,6 +6,47 @@
 
 ---
 
+## [0.4.0] — 2026-08-10
+
+### Phase 2.1 Memory Architecture Freeze
+
+**Architecture Design Phase 2.1 — FROZEN**
+
+`docs/design/01-Memory-Architecture.md` 经 Principal Architect Final Review 后从 Proposed 标记为 Accepted (FROZEN)。Phase 2.1 Memory Architecture 冻结，不再继续打磨。
+
+### Changed
+
+- `01-Memory-Architecture.md` 状态：Proposed → **Accepted (FROZEN)**
+- Memory 结构术语：Raw + Derived + User Control Layer → **Raw + Derived cognitive layers + User Control Plane**
+- 架构不变量：12 → **15**（新增 INV-13 Memory 不要求显式版本号 / INV-14 Context Condensation ≠ Memory Consolidation / INV-15 Brain Snapshot ≠ Cognitive Memory 语义边界）
+
+### Added
+
+- Phase 2.1 Memory Architecture Freeze 记录（本文件此条目）
+
+### Phase 2.1 Key Decisions
+
+- **D-2**: Memory 采用两层认知层 + 用户控制面（Raw Layer ADD-only + Derived Layer 非有损演化 + User Control Plane）
+- **D-11~D-18**: OQ-1~OQ-8 全部 Resolved（Community / Transient Context / Condenser Boundary / Event Memory / Snapshot Boundary / Versioning / User Memory Boundary / Bootstrap）
+- **关键边界**：
+  - EventStream → cognitive derivation → Event/Episodic Memory（separate but traceable）
+  - Context Condensation → Brain Context Assembly（≠ Memory Consolidation → Reflection → Memory）
+  - Brain Snapshot ≠ Cognitive Memory（语义边界；物理拓扑 Phase 3 Deferred）
+  - User Memory ≠ User Profile / Identity（完整 User Model 归属 Phase 2.2/2.3 Deferred）
+  - Memory Bootstrap = no personal experiential history（≠ zero-knowledge system）
+
+### Architecture Status
+
+```
+Architecture Design Phase 1.5        — FROZEN
+        ↓
+Architecture Design Phase 2.1 Memory — FROZEN
+        ↓
+Architecture Design Phase 2.2 Identity（待启动）
+```
+
+---
+
 ## [0.3.0] — 2026-08-07
 
 ### Phase 1.5 Architecture Freeze
