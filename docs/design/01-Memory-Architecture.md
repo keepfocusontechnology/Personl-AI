@@ -1,6 +1,6 @@
 # Memory Architecture
 
-> **Status**: Draft
+> **Status**: Proposed
 >
 > **Phase**: 2.1 — Memory Architecture
 >
@@ -37,7 +37,7 @@ Phase 1.5 已冻结以下约束，本文档不修改这些约束，只在其框�
 - Memory 的整理结果属于 Autonomous Evolution（ADR-002 D4）
 - Memory 不直接被 Agent 访问（ADR-004 D7）
 
-本文档通过 12 个 Architecture Questions（Q1-Q12）展开分析，比较三种架构选项（Option A/B/C），提出推荐方案，并列出需要 Principal Architect 决策的 Open Questions。
+本文档通过 12 个 Architecture Questions（Q1-Q12）展开分析，比较三种架构选项（Option A/B/C），提出推荐方案，并记录 8 个已 Resolved 的 Architecture Questions（OQ-1~OQ-8，已完成 Principal Architect Decision Reconciliation）。
 
 **本文档不涉及**：数据库类型、表结构、JSON Schema、SQL、API Endpoint、Python Class、Embedding Model、Chunk 参数、Token 数、Recall Top-K、Agent Prompt、Agent Workflow、Reflection 算法、Identity 详细结构、Self Model 详细结构、Goal 系统、Agency Trigger 算法、Planning 算法、Runtime。这些属于后续 Phase 或本 Phase 的 Deferred Decisions。
 
@@ -53,9 +53,9 @@ Memory 不是：
 - 不是"所有持久化数据的总称"（ADR-001 已冻结）
 - 不是 Brain Persistence（Brain Persistence = Snapshot + EventStream + Memory + 其他 Durable State）
 - 不是 EventStream（EventStream = 系统事实记录 + 通信总线，ADR-003）
-- 不是 Runtime Context（Runtime Context 是 Execution 的临时状态，ADR-004）
+- 不是 Transient Cognitive / Runtime Context（sensory / short-lived / working context 属于 transient cognitive/runtime context，不属于长期 Memory Architecture；其具体归属由 Brain Context Assembly 与 Execution Runtime 后续设计确定，ADR-004）
 - 不是 External Files（External Files 属于 Environment Layer）
-- 不是 User Profile（User Profile 是 Identity 的组成部分）
+- 不是 User Profile / 完整 User Model（User Memory 保存关于用户的经历、事实、偏好证据及可追溯的派生认知，但不等同于完整 User Model / User Profile；完整用户模型及其与 Identity / Self Model 的关系将在后续架构阶段确定）
 - 不是 Identity（Identity 定义"我是谁"，Memory 记录"发生了什么"）
 - 不是 Self Model（Self Model 是从 Memory 提炼的自我理解）
 
@@ -113,7 +113,7 @@ Memory 是 Brain 的**经历基础层**——其他 Brain 组件从 Memory 获�
 - **EventStream** 记录所有系统事件（包括 Experience Event + Brain State Event + Agency Event + Execution Event + Reflection Event）
 - **Memory** 只记录 Experience Event（用户经历 + 系统经历）+ Consolidation Output
 
-Memory 是 EventStream 中 Experience 类事件的**认知加工层**——EventStream 是原始事实流，Memory 是经过 Retain 处理后的经历记忆。
+Memory 中的 Event Memory 是 EventStream Experience 事件的**认知加工表示**（cognitive derivative of experienced system facts）——EventStream 是原始事实流（system fact），Memory 是经过 cognitive selection / retain / structuring 处理后的经历记忆。两者 **separate but traceable**——Memory 的 Event Memory 保留对 source EventStream event identity 的溯源引用，但不是 EventStream 的逻辑子集。
 
 ---
 
@@ -744,6 +744,9 @@ User Control Layer（Deletion Log + Correction Log + Provenance）
 | INV-10 | 用户控制优先 | 用户可以删除/修正任何记忆，优先于 ADD-only | Human-centric / 隐私主权 |
 | INV-11 | Consolidation 由 Reflection 执行 | Memory 不执行整理逻辑，Reflection 执行整理并写入 Memory | Philosophy §3 / §10.3 |
 | INV-12 | Memory 变更通过 EventStream | Memory 的所有写入通过 EventStream 记录 | ADR-003 |
+| INV-13 | Memory 不要求显式 version number | 通过双时间 + 有效期 + supersedes/invalidates 隐式管理版本（仅适用于 Memory Architecture，不推导到其他组件） | OQ-6 Resolved |
+| INV-14 | Context Condensation ≠ Memory Consolidation | Context Condensation → Brain Context Assembly；Memory Consolidation → Reflection → Memory | OQ-3 Resolved |
+| INV-15 | Brain Snapshot ≠ Cognitive Memory（语义边界） | Memory Architecture 不语义拥有 Brain Snapshot；物理共存关系 Phase 3 Deferred | OQ-5 Resolved |
 
 ---
 
@@ -763,16 +766,16 @@ User Control Layer（Deletion Log + Correction Log + Provenance）
 | D-8 | Conflict Resolution 算法 | Phase 2.4 | 冲突检测和解决的具体算法 |
 | D-9 | Memory 与 Self Model 的数据接口 | Phase 2.3 | Self Model 如何从 Memory 获取行为数据 |
 | D-10 | Memory 与 Reflection 的执行接口 | Phase 2.4 | Reflection 如何读取 Memory、如何写入整理结果 |
-| D-11 | Memory 物理存储与 Snapshot 的关系 | Phase 3 | Memory Storage 是否承载 Brain Snapshot（ADR-001 提到 Snapshot 可以由 Memory Storage 承载） |
+| D-11 | Memory Storage 物理存储与 Brain Snapshot 的物理共存关系 | Phase 3 | 语义边界已决定（Brain Snapshot ≠ Cognitive Memory，Memory Architecture 不语义拥有 Brain Snapshot）；物理存储是否同库/分库/存储引擎在 Phase 3 决定（ADR-001 允许 Snapshot 由 Memory Storage 物理承载） |
 | D-12 | Memory 导出格式 | Phase 3 | 用户导出 Memory 的数据格式 |
 | D-13 | Memory 跨设备同步 | Phase 3 | 多设备场景下 Memory 的同步机制 |
 | D-14 | Memory 加密 / 安全 | Phase 3 | Memory 数据的加密和访问控制 |
 
 ---
 
-## 17. Open Questions for Principal Architect
+## 17. Resolved Architecture Questions
 
-以下问题需要 Principal Architect 决策，本 Phase 不做决策：
+以下问题已完成 Principal Architect Review，全部 Resolved。逐项记录 Question / Principal Architect Decision / Architecture Consequence / Deferred Detail（如有）。
 
 ### OQ-1: Memory 是否需要三层子图（Episode → Entity → Community）？
 
@@ -780,9 +783,25 @@ User Control Layer（Deletion Log + Correction Log + Provenance）
 
 **问题**：Community 层（抽象聚类）是 Memory 的职责，还是 Reflection 的输出？
 
-**影响**：如果 Community 属于 Memory，Memory 需要增加第三层；如果属于 Reflection，Memory 保持两层。
+**Principal Architect Decision**：**不采用 Episode → Entity → Community 作为 Memory 的三层核心架构。**
 
-**AI 建议**：Community 属于 Reflection 的输出，写入 Derived Layer 的 Consolidation Output。Memory 保持两层（Raw + Derived）。
+Memory 的核心认知演化可以保留：
+
+> Experience / Episode → Derived Semantic / Entity-level Memory
+
+但 Community 不是 Memory 的基础层级。Community 更接近：
+- 多条 Memory 的聚合
+- 模式发现
+- 高层抽象
+- 跨经历归纳
+
+因此它应被视为 **Reflection / Memory Reflection 可能产生的派生认知结果**，而不是独立的 Memory 基础层。
+
+**文档修订**：Graphiti Community 保留为 research reference，不成为 Personal-AI Memory 的架构层。
+
+**Architecture Consequence**：Memory 保持两层（Raw Layer + Derived Layer），不增加 Community 层。Community 作为 Reflection 的可能输出，写入 Derived Layer 的 Consolidation Output。
+
+**Status**: Resolved — Accepted with boundary clarification
 
 ### OQ-2: 4 层记忆模型（感官/短期/工作/长期）是否采用？
 
@@ -790,9 +809,17 @@ User Control Layer（Deletion Log + Correction Log + Provenance）
 
 **问题**：Personal-AI 的 Memory 是否需要感官/短期/工作记忆层，还是只保留长期记忆？
 
-**影响**：感官/短期/工作记忆更接近 Runtime Context（ADR-004 中的 Execution 临时状态），可能不属于 Memory 核心能力。
+**Principal Architect Decision**：不采用传统四层认知记忆模型作为 Personal-AI Memory Taxonomy。Sensory / short-term / working memory 本质上属于 Transient Cognitive / Runtime Context，而不是本文定义的 Long-term Cognitive / Experiential Memory。
 
-**AI 建议**：感官/短期/工作记忆属于 Execution Layer 的 Runtime Context（ADR-004），不属于 Memory。Memory 只负责长期记忆（Raw Layer + Derived Layer）。
+**边界澄清**：禁止简单写成"sensory / short-term / working memory = Execution Runtime Context"。部分 Working Context 可能由 Brain 的 Context Assembly 构建和使用。正确边界是：
+
+> Sensory / short-lived / working context 属于 transient cognitive/runtime context，不属于长期 Memory Architecture；其具体归属由 Brain Context Assembly 与 Execution Runtime 后续设计确定。
+
+Memory Architecture 本阶段只负责 Long-term cognitive / experiential memory。
+
+**Architecture Consequence**：Memory 保持两层（Raw Layer + Derived Layer），不增加感官/短期/工作记忆层。Transient cognitive context 的具体归属（Brain Context Assembly vs Execution Runtime）在后续架构阶段确定。
+
+**Status**: Resolved — Accepted with wording correction
 
 ### OQ-3: Memory 的 Condensers（上下文压缩）是否采用？
 
@@ -800,9 +827,28 @@ User Control Layer（Deletion Log + Correction Log + Provenance）
 
 **问题**：Condensers 是 Memory 的 Recall 阶段的一部分，还是 Execution Layer 的上下文管理？
 
-**影响**：如果属于 Memory，Recall 需要返回压缩后的记忆；如果属于 Execution，Memory 返回原始记忆，Execution 自行压缩。
+**Principal Architect Decision**：Agent 原建议"Condensers 属 Execution Context Management"——**不接受**。必须区分两个概念：
 
-**AI 建议**：Condensers 属于 Execution Layer 的上下文管理。Memory 的 Recall 返回相关记忆集合，压缩由 Execution 负责。
+**A. Context Condensation**——例如压缩当前对话上下文、压缩当前 Planning 输入、为模型上下文窗口生成摘要、从大量 Recall 结果中形成当前任务上下文。属于 **Brain Context Assembly**（ADR-004 已冻结：Brain 负责 Planning / Context Assembly / Cognitive / Intent Decisions）。
+
+> Context Condensation → Brain Context Assembly capability
+
+不是 Memory，也不是简单归 Execution。
+
+**B. Memory Consolidation**——例如多个经历合并、知识提取、记忆抽象、Memory pattern discovery。属于 **Reflection → produces consolidation decision/result → Memory stores the result**。
+
+> Memory Consolidation → Reflection → Memory
+
+**新边界**（本阶段必须明确）：
+
+> Context Condensation ≠ Memory Consolidation
+
+**Architecture Consequence**：
+- Context Condenser 归属 Brain Context Assembly，不放入 Execution，也不放入 Memory
+- Memory Consolidation 归属 Reflection，结果写入 Memory Derived Layer
+- Memory 的 Recall 返回相关记忆集合，不负责上下文压缩
+
+**Status**: Resolved — Principal Architect Override
 
 ### OQ-4: Memory 是否需要独立的事件系统（Episode 层）？
 
@@ -810,9 +856,22 @@ User Control Layer（Deletion Log + Correction Log + Provenance）
 
 **问题**：Memory 的 Raw Layer（Event Memory）是否就是 EventStream 的子集，还是 Memory 有自己的事件存储？
 
-**影响**：如果 Memory 的 Event Memory 就是 EventStream 的 Experience Event 子集，Memory 不需要独立的事件存储；如果需要独立存储，存在数据冗余。
+**Principal Architect Decision**：Memory 的 Event Memory **不是 EventStream 的逻辑子集**。正确语义：
 
-**AI 建议**：Memory 的 Event Memory 是 EventStream 中 Experience Event 的认知加工副本。EventStream 是事实记录（通信总线），Memory 的 Event Memory 是经历记录（带上下文、双时间标记）。两者分离但关联——Memory 的 Event Memory 引用 EventStream 的对应事件 ID。
+> EventStream Event → cognitive selection / retain / structuring → Event / Episodic Memory
+
+Memory 中的 Event Memory 是 **EventStream 事实的认知加工表示**（cognitive derivative of experienced system facts），应该能够引用 source EventStream event identity，但不应该理解成"把 EventStream 的某些行复制进 Memory"。
+
+**语义区分**：
+
+> EventStream = system fact
+> Event Memory = cognitive representation of experienced fact
+
+两者保持 **separate but traceable**。
+
+**Architecture Consequence**：Memory 有自己的事件存储（Event Memory），不是 EventStream 的子集。Memory 的 Event Memory 保留对 source EventStream event 的溯源引用（provenance traceability），但具体 event_id 字段 Schema 在 Phase 3 设计。本阶段只定义架构语义。
+
+**Status**: Resolved — Accepted with semantic clarification
 
 ### OQ-5: Memory 的物理存储是否承载 Brain Snapshot？
 
@@ -820,9 +879,30 @@ User Control Layer（Deletion Log + Correction Log + Provenance）
 
 **问题**：Memory Storage 是否就是 Brain Snapshot 的物理存储，还是 Snapshot 有独立的存储？
 
-**影响**：如果 Memory Storage 承载 Snapshot，Memory 的物理存储需要支持 Snapshot 的读写；如果独立，Memory 只负责经历记忆。
+**Principal Architect Decision**：不能全部 Deferred。Phase 2.1 **现在就决定语义边界**：
 
-**AI 建议**：Deferred to Phase 3。本 Phase 只确认 Memory 的逻辑范围（经历记忆），物理存储与 Snapshot 的关系是 Phase 3 的决策。
+> Brain Snapshot ≠ Cognitive Memory
+> Memory Architecture does not semantically own Brain Snapshot
+
+但 ADR-001 已允许 Snapshot 可以由 Memory Storage 物理承载。因此必须区分：
+
+**Logical Ownership（现在决定）**：
+- Memory = cognitive / experiential memory
+- Brain Snapshot = Brain Persistence artifact
+
+**Physical Storage（后续决定）**：
+- Memory Storage 是否物理承载 Snapshot？
+- 是否同库？是否分库？使用什么存储引擎？
+
+这些才是 Deferred to Phase 3。
+
+**最终表述**：
+
+> Semantic boundary decided now; physical persistence topology deferred.
+
+**Architecture Consequence**：D-11 改名为"Memory Storage 物理存储与 Brain Snapshot 的物理共存关系"，只 Deferred 物理拓扑决策，语义边界已冻结。
+
+**Status**: Resolved — Semantic Decision Accepted / Physical Decision Deferred
 
 ### OQ-6: Memory 是否需要版本化（Versioning）？
 
@@ -830,9 +910,26 @@ User Control Layer（Deletion Log + Correction Log + Provenance）
 
 **问题**：Memory 是否需要像 Identity 一样有显式的版本号，还是通过双时间模型 + 有效期隐式管理版本？
 
-**影响**：显式版本化增加管理复杂度，但便于回滚；隐式管理更简洁，但回滚需要时间查询。
+**Principal Architect Decision**：**Memory item 不要求引入显式 version number。**
 
-**AI 建议**：通过双时间模型 + 有效期隐式管理版本，不引入显式版本号。Memory 的版本管理通过时间查询实现。
+Memory 演化主要依靠：
+- valid time
+- transaction time
+- validity state
+- provenance
+- supersedes / invalidates semantics
+
+表达。无需为了版本管理人为设计 memory_v1 / memory_v2 / memory_v3。
+
+**重要约束**：这只针对 Memory Architecture。不能推导成"Personal-AI 所有东西都不需要显式版本"。例如后续 Identity / Self Model / Brain Snapshot 仍然可能需要显式版本。
+
+**Architecture Consequence**：保留双时间 + 有效期方案。在正文明确：
+
+> Memory does not require explicit version numbers as an architecture invariant.
+
+具体 supersedes / invalidates 数据结构 Deferred to Phase 3。
+
+**Status**: Resolved — Accepted
 
 ### OQ-7: Memory 与 Identity 的边界——User Memory vs User Profile
 
@@ -840,9 +937,40 @@ User Control Layer（Deletion Log + Correction Log + Provenance）
 
 **问题**：User Memory（Memory）和 User Profile / User Relationship Definition（Identity）的边界在哪里？
 
-**影响**：如果边界不清晰，User Memory 可能逐渐膨胀为 User Profile，违反 Memory ≠ Identity。
+**Principal Architect Decision**：Agent 当前表述"User Memory 记录经历，Identity 记录 User Profile / 用户认知结论"——**不接受**。
 
-**AI 建议**：User Memory 记录"用户做过什么、说过什么"（经历），Identity 的用户关系定义记录"我如何理解与用户的关系"（结论）。Memory 不做结论，Identity 从 Memory 提炼结论。
+Identity 的核心语义是 Personal-AI "我是谁"，**不是完整 User Profile 的存储位置**。
+
+**Memory 可以保存**（关于用户的）：
+- 经历
+- 历史事实
+- 用户明确表达的偏好
+- 从经历得出的可追溯 Preference Memory
+- Project-related user facts
+- Relationship experiences
+
+例如：
+> 过去 10 次交互中，用户 8 次要求直接给结论。
+
+以及可追溯的 Derived Memory：
+> 用户倾向于偏好简洁、直接的回复。
+
+**Memory 不应该负责**：
+- 形成完整 User Model
+- 直接定义"我应该如何理解与用户的关系"
+
+这些边界将在 Phase 2.2 Identity / Phase 2.3 Self Model 进一步确定。
+
+**当前只冻结**：
+
+> User Memory ≠ User Profile
+> User Memory ≠ Identity
+
+完整 User Model 的归属：Deferred。
+
+**Architecture Consequence**：删除"User Profile 是 Identity 的组成部分"等未经 Phase 2.2/2.3 决策支持的结论。User Memory 保存关于用户的经历、事实、偏好证据及可追溯的派生认知，但不等同于完整 User Model / User Profile。
+
+**Status**: Resolved — Current Identity Mapping Rejected; Full User Model Boundary Deferred
 
 ### OQ-8: Memory 的初始状态（Bootstrap）
 
@@ -850,9 +978,37 @@ User Control Layer（Deletion Log + Correction Log + Provenance）
 
 **问题**：Memory 是否需要预置任何初始记忆，还是完全从零开始积累？
 
-**影响**：预置初始记忆可能影响 Identity 的初始状态；完全从零开始可能导致早期用户体验不佳。
+**Principal Architect Decision**：不要写"Memory 完全从零开始"，因为这容易推导成"Personal-AI = zero knowledge = zero identity = blank system"。这不是我们的意思。正确区分：
 
-**AI 建议**：Memory 完全从零开始。初始 Identity 由用户配置（Protected Core + 初始人格特征），Memory 通过经历积累逐步丰富。这与 Philosophy §6 的生命周期一致（"新生儿期：Memory 为空"）。
+**Personal Experiential Memory**——首次建立用户 Digital Life 时：
+> Personal experiential history = empty by default
+
+最初没有：
+- Episodic history
+- User interaction history
+- Project Memory history
+- Relationship experience history
+- Learned Preference Memory
+
+**System Prior Structure**——但系统已经拥有：
+- 基础模型知识
+- 系统架构规则
+- Protected Core
+- 初始 Identity
+- 安全边界
+- 系统能力定义
+
+这些东西可能不属于 Memory，但它们意味着 Personal-AI 不是一个 zero-knowledge blank system。
+
+**正式表述**：
+
+> Memory starts with no personal experiential history by default; Personal-AI does not start with zero knowledge or zero prior structure.
+
+如果引用 Philosophy §6 的"Memory 为空"，请明确指 personal experiential memory 为空，而不是整个系统没有先验结构。
+
+**Architecture Consequence**：Memory 的 Bootstrap 语义是"无个人经历历史"，不是"零知识系统"。System Prior Structure（Protected Core / 初始 Identity / 安全边界 / 系统能力定义）不属于 Memory，但它们存在于系统中。
+
+**Status**: Resolved — Modified
 
 ---
 
@@ -872,6 +1028,14 @@ User Control Layer（Deletion Log + Correction Log + Provenance）
 | D-8 | 非有损演化 | Knowledge 修正不删除旧版本，标记有效期（参考 Graphiti） |
 | D-9 | 用户控制优先 | 用户可以删除/修正任何记忆，优先于 ADD-only |
 | D-10 | Memory 不做结论 | Memory 只提供数据，不替 Self Model / Goal / Agency 做结论 |
+| D-11 | Community 不是 Memory 基础层 | Community 是 Reflection 可能产生的派生认知结果，写入 Derived Layer（OQ-1 Resolved） |
+| D-12 | Transient Cognitive / Runtime Context ≠ Long-term Memory | Sensory / short-lived / working context 不属于长期 Memory Architecture；具体归属由 Brain Context Assembly 与 Execution Runtime 后续设计确定（OQ-2 Resolved） |
+| D-13 | Context Condensation ≠ Memory Consolidation | Context Condensation → Brain Context Assembly；Memory Consolidation → Reflection → Memory（OQ-3 Resolved） |
+| D-14 | Event Memory ≠ EventStream subset | Event Memory 是 EventStream 事实的认知加工表示（cognitive derivative），separate but traceable（OQ-4 Resolved） |
+| D-15 | Brain Snapshot ≠ Cognitive Memory（语义边界） | Memory Architecture 不语义拥有 Brain Snapshot；物理共存关系 Phase 3 Deferred（OQ-5 Resolved） |
+| D-16 | Memory 不要求显式 version number | 通过双时间 + 有效期 + supersedes/invalidates 隐式管理版本（OQ-6 Resolved） |
+| D-17 | User Memory ≠ User Profile / Identity | User Memory 保存经历、事实、偏好证据及可追溯派生认知；完整 User Model 归属 Deferred（OQ-7 Resolved） |
+| D-18 | Memory Bootstrap = 无个人经历历史，非零知识系统 | Personal experiential history empty by default；System Prior Structure 存在但不属于 Memory（OQ-8 Resolved） |
 
 ### 18.2 与冻结架构的一致性
 
@@ -891,10 +1055,10 @@ User Control Layer（Deletion Log + Correction Log + Provenance）
 
 ---
 
-> **文档状态：Draft**
+> **文档状态：Proposed**
 >
-> 本文档是 Phase 2.1 Memory Architecture 的输出，包含 12 个 Architecture Questions 的分析、三种架构选项的比较、推荐方案（Option C）、12 个架构不变量、14 个 Deferred Decisions、8 个 Open Questions。
+> 本文档是 Phase 2.1 Memory Architecture 的输出，包含 12 个 Architecture Questions 的分析、三种架构选项的比较、推荐方案（Option C）、12 个架构不变量、14 个 Deferred Decisions、8 个 Resolved Architecture Questions（OQ-1~OQ-8 已完成 Principal Architect Decision Reconciliation）。
 >
-> **需要 Principal Architect Review**：特别是 OQ-1 到 OQ-8 的 8 个 Open Questions。
+> **Open Questions**: No blocking open architecture questions remain for Phase 2.1.
 >
-> **Status**: Phase 2.1 Memory Architecture — Ready for Principal Architect Review
+> **Status**: Phase 2.1 Memory Architecture — Ready for Final Principal Architect Review
