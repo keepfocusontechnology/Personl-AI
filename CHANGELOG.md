@@ -6,6 +6,44 @@
 
 ---
 
+## [0.5.0] — 2026-08-10
+
+### Phase 2.2 Identity Architecture Draft
+
+**Architecture Design Phase 2.2 — Draft Ready for Principal Architect Review**
+
+`docs/design/02-Identity-Architecture.md` 草案完成，包含 25 节、Q1-Q18 分析、Option A/B/C 比较、Option C 推荐、15 个 Architecture Invariants (INV-I1~INV-I15)、15 个 Deferred Decisions (DF-I1~DF-I15)、7 个 Open Questions (OQ-I1~OQ-I7)。
+
+### Added
+
+- `docs/design/02-Identity-Architecture.md` — Phase 2.2 Identity Architecture 草案
+
+### Phase 2.2 Key Decisions (ID-1 ~ ID-15)
+
+- **ID-1**: Identity = 存在本质定义，回答"我是谁"
+- **ID-2**: Identity 10 维度（D1 存在性定义 / D2 核心价值 / D3 安全边界 / D4 用户授权 / D5 人格特征 / D6 非核心价值观 / D7 行为原则 / D8 用户关系定义 / D9 长期倾向 / D10 表达风格）
+- **ID-3**: 三层演化映射（D1-D4 → Layer A / D5-D9 → Layer B / D10 → Layer C）
+- **ID-4**: Personality 拆分（D5 identity-defining personality, Layer B + D10 adaptive expressive style, Layer C）——对 SOUL.md 的架构改进
+- **ID-5**: Identity ≠ system prompt / persona / 用户偏好 / Memory 摘要 / Self Model 别名 / User Profile / Role Prompt / Character Card
+- **ID-6**: Identity ≠ Self Model；Self Model 可建议但不可直接修改 Identity
+- **ID-7**: Identity D8 ≠ User Memory；D8 定义 AI 侧关系认知
+- **ID-8**: Identity 采用显式版本号（与 Memory 隐式版本管理不同）
+- **ID-9**: Drift Detection 只检测 Layer B（D5-D9）
+- **ID-10**: Initial Identity = System Prior (D1-D3) + User-Configured (D4/D5/D8)
+- **ID-11**: Identity 变更通过 EventStream 通信
+- **ID-12**: Identity 版本是 Brain Snapshot 的组成部分
+- **ID-13**: Memory 间接影响 Identity（Memory → Reflection → 提议 → 用户确认 → Identity 更新）
+- **ID-14**: Identity 不存在自动重置；用户可显式回滚到 V0
+- **ID-15**: 用户拒绝演化提议后记录供 Self Model 学习
+
+### Phase 2.2 Options
+
+- **Option A (Static Identity)**: Rejected — 与 ADR-002 冲突
+- **Option B (Fully Evolvable Identity)**: Rejected — 与 ADR-002 冲突
+- **Option C (Three-Layer Evolvable Identity)**: 推荐 — 与冻结架构完全一致
+
+---
+
 ## [0.4.0] — 2026-08-10
 
 ### Phase 2.1 Memory Architecture Freeze
